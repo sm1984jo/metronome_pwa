@@ -135,14 +135,29 @@ if ('serviceWorker' in navigator) {
   const unlockBtn = $('#unlockBtn');
   let audioCtx, unlocked = false;
 
-  function unlockAudio(){
-    if (unlocked) return;
+  async function ensureAudioContext(){
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new Ctx();
-    const buffer = audioCtx.createBuffer(1,1,22050);
-    const src = audioCtx.createBufferSource(); src.buffer = buffer; src.connect(audioCtx.destination); src.start(0);
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    unlocked = true; unlockOverlay.style.display = 'none';
+    if(!Ctx) return null;
+    if(!audioCtx) audioCtx = new Ctx();
+    if(audioCtx.state === 'suspended'){
+      try { await audioCtx.resume(); } catch(e){}
+    }
+    return audioCtx;
+  }
+
+  async function unlockAudio(){
+    const ctx = await ensureAudioContext();
+    if(!ctx || unlocked) return ctx;
+    try {
+      const buffer = ctx.createBuffer(1,1,22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch(e){}
+    unlocked = true;
+    unlockOverlay.style.display = 'none';
+    return ctx;
   }
   ['touchstart','mousedown','keydown'].forEach(ev=>window.addEventListener(ev, ()=>{ if(!unlocked) unlockAudio(); }, {once:true, passive:true}));
   unlockBtn.addEventListener('click', unlockAudio);
@@ -166,7 +181,7 @@ if ('serviceWorker' in navigator) {
   function noteLengthSec(){ const bpm=+bpmEl.value; const base=60/bpm; const subdiv=+subdivEl.value; if(swingEl.checked&&subdiv===2) return base/2; return subdiv>1? base/subdiv: base; }
 
   function scheduleClick(time, isAccent, isSub){
-    if(!audioCtx) return;
+    if(!audioCtx || audioCtx.state !== 'running') return;
     const vol=+volumeEl.value;
     const osc=audioCtx.createOscillator();
     const env=audioCtx.createGain();
@@ -206,9 +221,14 @@ if ('serviceWorker' in navigator) {
     } 
   }
 
-  function start(){ 
-    if(!unlocked) unlockAudio(); 
-    if(isRunning) return; 
+  async function start(){
+    await unlockAudio();
+    if(!audioCtx) return;
+    if(audioCtx.state === 'suspended'){
+      try { await audioCtx.resume(); } catch(e){}
+      if(audioCtx.state !== 'running') return;
+    }
+    if(isRunning) return;
     isRunning=true; startStopBtn.textContent='정지'; 
     const beatsPerBar=+beatsEl.value; updateLEDs(0,beatsPerBar); 
     currentBeat=0; nextNoteTime = audioCtx.currentTime + 0.08; 
@@ -218,7 +238,10 @@ if ('serviceWorker' in navigator) {
   function stop(){ isRunning=false; startStopBtn.textContent='시작'; if(scheduleTimer) clearInterval(scheduleTimer); }
   function reset(){ stop(); tapTimes=[]; beatText.textContent='1'; updateLEDs(0, +beatsEl.value); }
 
-  startStopBtn.addEventListener('click', ()=> isRunning? stop() : start());
+  startStopBtn.addEventListener('click', ()=>{
+    if(isRunning) stop();
+    else start();
+  });
   resetBtn.addEventListener('click', reset);
   bpmEl.addEventListener('input', updateBpmDisplay);
   minus10.addEventListener('click', ()=>{ bpmEl.value=Math.max(20, +bpmEl.value-10); updateBpmDisplay(); });
