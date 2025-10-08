@@ -35,6 +35,7 @@
     .sheet h2{margin:0 0 10px 0}
     .sheet p{margin:0 0 14px 0;color:var(--sub)}
     .sheet .btn{width:100%;font-size:18px}
+    .version{margin:40px 0 12px;text-align:center;color:var(--sub);font-size:11px;opacity:.7}
   </style>
 </head>
 <body>
@@ -122,6 +123,8 @@
     </div>
   </div>
 
+  <div class="version">버전 v1.0.2</div>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -135,16 +138,67 @@ if ('serviceWorker' in navigator) {
   const unlockBtn = $('#unlockBtn');
   let audioCtx, unlocked = false;
 
-  function unlockAudio(){
-    if (unlocked) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new Ctx();
-    const buffer = audioCtx.createBuffer(1,1,22050);
-    const src = audioCtx.createBufferSource(); src.buffer = buffer; src.connect(audioCtx.destination); src.start(0);
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    unlocked = true; unlockOverlay.style.display = 'none';
+  function showOverlay(){
+    unlockOverlay.style.display='flex';
   }
-  ['touchstart','mousedown','keydown'].forEach(ev=>window.addEventListener(ev, ()=>{ if(!unlocked) unlockAudio(); }, {once:true, passive:true}));
+
+  function hideOverlay(){
+    unlockOverlay.style.display='none';
+  }
+
+  function primeContext(ctx){
+    try {
+      const buffer = ctx.createBuffer(1,1,22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch(e){}
+  }
+
+  function handleStateChange(){
+    if(!audioCtx) return;
+    if(audioCtx.state === 'running'){
+      if(!unlocked){
+        primeContext(audioCtx);
+        unlocked = true;
+      }
+      hideOverlay();
+    } else {
+      unlocked = false;
+      showOverlay();
+    }
+  }
+
+  async function ensureAudioContext(){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    if(!audioCtx){
+      audioCtx = new Ctx();
+      audioCtx.addEventListener('statechange', handleStateChange);
+    }
+    return audioCtx;
+  }
+
+  async function unlockAudio(){
+    const ctx = await ensureAudioContext();
+    if(!ctx) return null;
+    if(ctx.state !== 'running'){
+      try { await ctx.resume(); } catch(e){}
+    }
+    if(ctx.state !== 'running'){
+      unlocked = false;
+      showOverlay();
+      return null;
+    }
+    if(!unlocked){
+      primeContext(ctx);
+      unlocked = true;
+    }
+    hideOverlay();
+    return ctx;
+  }
+  ['touchstart','mousedown','keydown'].forEach(ev=>window.addEventListener(ev, ()=>{ if(!unlocked) unlockAudio(); }, {passive:true}));
   unlockBtn.addEventListener('click', unlockAudio);
 
   const bpmEl = $('#bpm'); const bpmDisplay = $('#bpmDisplay');
@@ -166,7 +220,7 @@ if ('serviceWorker' in navigator) {
   function noteLengthSec(){ const bpm=+bpmEl.value; const base=60/bpm; const subdiv=+subdivEl.value; if(swingEl.checked&&subdiv===2) return base/2; return subdiv>1? base/subdiv: base; }
 
   function scheduleClick(time, isAccent, isSub){
-    if(!audioCtx) return;
+    if(!audioCtx || audioCtx.state !== 'running') return;
     const vol=+volumeEl.value;
     const osc=audioCtx.createOscillator();
     const env=audioCtx.createGain();
@@ -187,9 +241,13 @@ if ('serviceWorker' in navigator) {
 
   function updateLEDs(active,total){ leds.innerHTML=''; for(let i=0;i<total;i++){ const d=document.createElement('div'); d.className='led'+(i===active?' on':''); leds.appendChild(d);} }
 
-  function scheduler(){ 
-    while(audioCtx && nextNoteTime < audioCtx.currentTime + scheduleAheadTime){ 
-      const beatsPerBar=+beatsEl.value; const subdiv=+subdivEl.value; 
+  function scheduler(){
+    if(!audioCtx || audioCtx.state !== 'running'){
+      stop();
+      return;
+    }
+    while(audioCtx && nextNoteTime < audioCtx.currentTime + scheduleAheadTime){
+      const beatsPerBar=+beatsEl.value; const subdiv=+subdivEl.value;
       const beatIndex=currentBeat % beatsPerBar; 
       const isBarAccent=accentFirstEl.checked && beatIndex===0; 
       let stepsThisBeat=subdiv; if(subdiv===1) stepsThisBeat=1; 
@@ -206,19 +264,30 @@ if ('serviceWorker' in navigator) {
     } 
   }
 
-  function start(){ 
-    if(!unlocked) unlockAudio(); 
-    if(isRunning) return; 
-    isRunning=true; startStopBtn.textContent='정지'; 
-    const beatsPerBar=+beatsEl.value; updateLEDs(0,beatsPerBar); 
-    currentBeat=0; nextNoteTime = audioCtx.currentTime + 0.08; 
-    scheduleTimer = setInterval(scheduler, lookahead); 
+  async function start(){
+    const ctx = await unlockAudio();
+    if(!ctx || ctx.state !== 'running') return;
+    if(isRunning) return;
+    isRunning=true; startStopBtn.textContent='정지';
+    const beatsPerBar=+beatsEl.value; updateLEDs(0,beatsPerBar);
+    currentBeat=0; nextNoteTime = ctx.currentTime + 0.08;
+    scheduler();
+    scheduleTimer = setInterval(scheduler, lookahead);
   }
 
-  function stop(){ isRunning=false; startStopBtn.textContent='시작'; if(scheduleTimer) clearInterval(scheduleTimer); }
+  function stop(){
+    isRunning=false; startStopBtn.textContent='시작';
+    if(scheduleTimer){
+      clearInterval(scheduleTimer);
+      scheduleTimer=null;
+    }
+  }
   function reset(){ stop(); tapTimes=[]; beatText.textContent='1'; updateLEDs(0, +beatsEl.value); }
 
-  startStopBtn.addEventListener('click', ()=> isRunning? stop() : start());
+  startStopBtn.addEventListener('click', ()=>{
+    if(isRunning) stop();
+    else start();
+  });
   resetBtn.addEventListener('click', reset);
   bpmEl.addEventListener('input', updateBpmDisplay);
   minus10.addEventListener('click', ()=>{ bpmEl.value=Math.max(20, +bpmEl.value-10); updateBpmDisplay(); });
