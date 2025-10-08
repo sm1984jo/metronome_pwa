@@ -10,43 +10,48 @@
   <title>메트로놈</title>
   <style>
     :root{--bg:#0f1218;--card:#151a22;--fg:#e8eef9;--sub:#9fb0c7;--accent:#66d9ef}
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a2230,transparent),var(--bg);color:var(--fg);}
+    body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a2230,transparent),var(--bg);color:var(--fg)}
     .wrap{max-width:840px;margin:24px auto;padding:24px;padding-bottom:calc(env(safe-area-inset-bottom) + 24px)}
     header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
-    h1{font-size:22px;margin:0;font-weight:700;letter-spacing:.2px}
+    h1{font-size:22px;margin:0;font-weight:700}
     .card{background:var(--card);border:1px solid #232a36;border-radius:14px;padding:18px}
     .controls{display:grid;grid-template-columns:1fr;gap:14px}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;background:#1f2a3a;color:var(--fg);font-weight:700;cursor:pointer;transition:.15s;box-shadow:0 0 0 1px #2a3445 inset}
-    .btn.primary{background:#24415e;box-shadow:0 0 0 1px #2f5c86 inset}
     .btn.good{background:#1f3a2a;box-shadow:0 0 0 1px #2e5f46 inset}
     .btn.warn{background:#3a2d1f;box-shadow:0 0 0 1px #6a4e2b inset}
-    .btn.ghost{background:#1a2130;}
+    .btn.ghost{background:#1a2130}
     .big{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
     .sub{color:var(--sub);font-size:12px}
     input[type="range"]{width:100%}
-    .accent{background:#1e2b3d;border:1px solid #2f3f58;border-radius:10px;padding:10px}
-    .display{display:flex;align-items:center;justify-content:center;height:160px;margin:14px 0;border-radius:14px;border:1px solid #2a3445;background:linear-gradient(180deg,#162030,#101520);}
+    .display{display:flex;align-items:center;justify-content:center;height:160px;margin:14px 0;border-radius:14px;border:1px solid #2a3445;background:linear-gradient(180deg,#162030,#101520)}
     .leds{display:flex;justify-content:center;gap:10px;margin-top:10px}
     .led{width:12px;height:12px;border-radius:50%;background:#2a3445;transition:.06s}
     .led.on{background:var(--accent);box-shadow:0 0 18px var(--accent)}
-    .foot{display:flex;justify-content:space-between;margin-top:10px;color:var(--sub);font-size:12px}
-    .toggle{display:inline-flex;align-items:center;gap:8px}
-    .toggle input{transform:scale(1.2)}
-    .pill{display:inline-flex;gap:6px;background:#1a2230;border:1px solid #2a3445;border-radius:999px;padding:6px 10px;align-items:center}
-    .txt{background:#111824;color:var(--fg);border:1px solid #2a3445;border-radius:10px;padding:10px 12px;min-width:0}
-    label{font-size:12px;color:var(--sub)}
-    .kbd{font-size:12px;border:1px solid #2a3445;border-bottom-color:#111;padding:2px 6px;border-radius:6px;background:#141a24;color:var(--fg)}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:9999}
+    .sheet{background:#101725;border:1px solid #2a3445;border-radius:16px;padding:22px;max-width:420px;margin:20px;text-align:center}
+    .sheet h2{margin:0 0 10px 0}
+    .sheet p{margin:0 0 14px 0;color:var(--sub)}
+    .sheet .btn{width:100%;font-size:18px}
   </style>
 </head>
 <body>
+  <div class="overlay" id="unlockOverlay">
+    <div class="sheet">
+      <h2>소리 활성화</h2>
+      <p>iPhone 정책 때문에 먼저 한 번 눌러주세요.</p>
+      <button class="btn" id="unlockBtn">소리 켜기</button>
+    </div>
+  </div>
+
   <div class="wrap">
     <header>
       <h1>메트로놈</h1>
-      <div class="pill"><span class="sub">단축키</span> <span class="kbd">Space</span> 시작/정지 · <span class="kbd">↑/↓</span> BPM · <span class="kbd">T</span> 탭</div>
+      <div class="sub">홈 화면에 추가 → 앱처럼 사용 · 오프라인</div>
     </header>
+
     <div class="card">
       <div class="controls">
         <div>
@@ -68,7 +73,7 @@
         <div>
           <label>박자/악센트</label>
           <div class="row">
-            <select id="beats" class="txt">
+            <select id="beats" class="btn ghost">
               <option value="2">2/4</option>
               <option value="3">3/4</option>
               <option value="4" selected>4/4</option>
@@ -77,7 +82,7 @@
               <option value="7">7/8</option>
               <option value="9">9/8</option>
             </select>
-            <select id="subdiv" class="txt">
+            <select id="subdiv" class="btn ghost">
               <option value="1" selected>분할 없음</option>
               <option value="2">2분할</option>
               <option value="3">3분할</option>
@@ -85,8 +90,8 @@
             </select>
           </div>
           <div class="row">
-            <label class="toggle"><input type="checkbox" id="accentFirst" checked />첫 박자 악센트</label>
-            <label class="toggle"><input type="checkbox" id="swing" />스윙(재즈)</label>
+            <label class="sub"><input type="checkbox" id="accentFirst" checked /> 첫 박자 악센트</label>
+            <label class="sub"><input type="checkbox" id="swing" /> 스윙(재즈)</label>
           </div>
           <div class="row">
             <button class="btn good" id="startStop">시작</button>
@@ -97,7 +102,7 @@
         <div>
           <label>소리/표시</label>
           <div class="row">
-            <select id="sound" class="txt">
+            <select id="sound" class="btn ghost">
               <option value="click" selected>클릭</option>
               <option value="wood">우드블록</option>
               <option value="beep">비프</option>
@@ -105,12 +110,7 @@
             <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9" />
           </div>
           <div class="row">
-            <label class="toggle"><input type="checkbox" id="visual" checked />화면 플래시</label>
-            <label class="toggle"><input type="checkbox" id="vibrate" />진동(모바일)</label>
-          </div>
-          <div class="row">
-            <button class="btn" id="savePreset">프리셋 저장</button>
-            <button class="btn" id="loadPreset">불러오기</button>
+            <label class="sub"><input type="checkbox" id="visual" checked /> 화면 플래시</label>
           </div>
         </div>
       </div>
@@ -119,11 +119,6 @@
         <div class="big" id="beatText">1</div>
       </div>
       <div class="leds" id="leds"></div>
-
-      <div class="foot">
-        <div>정확도: Web Audio 스케줄러 사용</div>
-        <div><a href="#" id="installHelp" style="color:var(--accent);text-decoration:none">홈화면에 추가 &amp; 오프라인</a></div>
-      </div>
     </div>
   </div>
 
@@ -133,250 +128,114 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
   });
 }
+
 (() => {
-  const $ = sel => document.querySelector(sel);
-  const bpmEl = $("#bpm");
-  const bpmDisplay = $("#bpmDisplay");
-  const startStopBtn = $("#startStop");
-  const resetBtn = $("#reset");
-  const tapBtn = $("#tapBtn");
-  const tapInfo = $("#tapInfo");
-  const beatsEl = $("#beats");
-  const subdivEl = $("#subdiv");
-  const accentFirstEl = $("#accentFirst");
-  const swingEl = $("#swing");
-  const soundEl = $("#sound");
-  const volumeEl = $("#volume");
-  const visualEl = $("#visual");
-  const vibrateEl = $("#vibrate");
-  const display = $("#display");
-  const beatText = $("#beatText");
-  const leds = $("#leds");
-  const minus10 = $("#minus10");
-  const plus10  = $("#plus10");
-  const nudgeUp = $("#nudgeUp");
-  const nudgeDown = $("#nudgeDown");
-  const savePreset = $("#savePreset");
-  const loadPreset = $("#loadPreset");
+  const $ = s => document.querySelector(s);
+  const unlockOverlay = $('#unlockOverlay');
+  const unlockBtn = $('#unlockBtn');
+  let audioCtx, unlocked = false;
 
-  let audioCtx;
-  let isRunning = false;
-  let currentBeat = 0;
-  let nextNoteTime = 0;
-  let scheduleTimer;
-  let tapTimes = [];
-  let lastTap = 0;
-
-  const lookahead = 25;
-  const scheduleAheadTime = 0.1;
-
-  function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const resume = () => {
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      window.removeEventListener("touchstart", resume);
-      window.removeEventListener("mousedown", resume);
-    };
-    window.addEventListener("touchstart", resume, { once: true });
-    window.addEventListener("mousedown", resume, { once: true });
+  function unlockAudio(){
+    if (unlocked) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+    const buffer = audioCtx.createBuffer(1,1,22050);
+    const src = audioCtx.createBufferSource(); src.buffer = buffer; src.connect(audioCtx.destination); src.start(0);
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    unlocked = true; unlockOverlay.style.display = 'none';
   }
+  ['touchstart','mousedown','keydown'].forEach(ev=>window.addEventListener(ev, ()=>{ if(!unlocked) unlockAudio(); }, {once:true, passive:true}));
+  unlockBtn.addEventListener('click', unlockAudio);
+
+  const bpmEl = $('#bpm'); const bpmDisplay = $('#bpmDisplay');
+  const startStopBtn = $('#startStop'); const resetBtn = $('#reset');
+  const tapBtn = $('#tapBtn'); const tapInfo = $('#tapInfo');
+  const beatsEl = $('#beats'); const subdivEl = $('#subdiv');
+  const accentFirstEl = $('#accentFirst'); const swingEl = $('#swing');
+  const soundEl = $('#sound'); const volumeEl = $('#volume');
+  const visualEl = $('#visual'); const display = $('#display');
+  const beatText = $('#beatText'); const leds = $('#leds');
+  const minus10 = $('#minus10'); const plus10 = $('#plus10');
+  const nudgeUp = $('#nudgeUp'); const nudgeDown = $('#nudgeDown');
+
+  let isRunning=false, currentBeat=0, nextNoteTime=0, scheduleTimer;
+  let tapTimes=[], lastTap=0;
+  const lookahead=25, scheduleAheadTime=0.1;
 
   function updateBpmDisplay(){ bpmDisplay.textContent = bpmEl.value; }
+  function noteLengthSec(){ const bpm=+bpmEl.value; const base=60/bpm; const subdiv=+subdivEl.value; if(swingEl.checked&&subdiv===2) return base/2; return subdiv>1? base/subdiv: base; }
 
-  function noteLengthSec(){
-    const bpm = parseFloat(bpmEl.value);
-    const base = 60.0 / bpm;
-    const subdiv = parseInt(subdivEl.value, 10);
-    if (swingEl.checked && subdiv === 2) return base / 2;
-    return subdiv > 1 ? base / subdiv : base;
-  }
-
-  function scheduleClick(time, isAccent, isSub) {
-    const vol = parseFloat(volumeEl.value);
-    const osc = audioCtx.createOscillator();
-    const env = audioCtx.createGain();
+  function scheduleClick(time, isAccent, isSub){
+    if(!audioCtx) return;
+    const vol=+volumeEl.value;
+    const osc=audioCtx.createOscillator();
+    const env=audioCtx.createGain();
     let freq;
-    const sound = soundEl.value;
-    if (sound === "click") {
-      freq = isAccent ? 2000 : (isSub ? 1500 : 1700);
-    } else if (sound === "wood") {
-      freq = isAccent ? 900 : (isSub ? 650 : 750);
-    } else {
-      freq = isAccent ? 1000 : (isSub ? 700 : 850);
-    }
-    osc.frequency.value = freq;
-    env.gain.value = 0;
-    osc.connect(env).connect(audioCtx.destination);
-    const a = isAccent ? 0.002 : 0.003;
-    const d = isAccent ? 0.06 : 0.04;
-    env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(vol, time + a);
-    env.gain.exponentialRampToValueAtTime(0.0001, time + d);
-    osc.start(time);
-    osc.stop(time + d + 0.02);
+    const sound=soundEl.value;
+    if(sound==='click'){ freq=isAccent?2000:(isSub?1500:1700);} 
+    else if(sound==='wood'){ freq=isAccent?900:(isSub?650:750);} 
+    else { freq=isAccent?1000:(isSub?700:850);}
+    osc.frequency.value=freq; env.gain.value=0; osc.connect(env).connect(audioCtx.destination);
+    const a=isAccent?0.002:0.003; const d=isAccent?0.06:0.04;
+    env.gain.setValueAtTime(0,time); env.gain.linearRampToValueAtTime(vol,time+a); env.gain.exponentialRampToValueAtTime(0.0001,time+d);
+    osc.start(time); osc.stop(time+d+0.02);
   }
 
-  function flashVisual(isAccent){
-    if (!visualEl.checked) return;
-    const el = document.querySelector('.display');
-    el.style.transform = "scale(1.02)";
-    el.style.boxShadow = isAccent ? "0 0 40px rgba(102,217,239,.5)" : "0 0 22px rgba(102,217,239,.25)";
-    setTimeout(()=>{ el.style.transform="scale(1)"; el.style.boxShadow="none"; }, 60);
+  function flashVisual(ac){ if(!visualEl.checked) return; display.style.transform='scale(1.02)';
+    display.style.boxShadow=ac?'0 0 40px rgba(102,217,239,.5)':'0 0 22px rgba(102,217,239,.25)';
+    setTimeout(()=>{display.style.transform='scale(1)'; display.style.boxShadow='none';},60); }
+
+  function updateLEDs(active,total){ leds.innerHTML=''; for(let i=0;i<total;i++){ const d=document.createElement('div'); d.className='led'+(i===active?' on':''); leds.appendChild(d);} }
+
+  function scheduler(){ 
+    while(audioCtx && nextNoteTime < audioCtx.currentTime + scheduleAheadTime){ 
+      const beatsPerBar=+beatsEl.value; const subdiv=+subdivEl.value; 
+      const beatIndex=currentBeat % beatsPerBar; 
+      const isBarAccent=accentFirstEl.checked && beatIndex===0; 
+      let stepsThisBeat=subdiv; if(subdiv===1) stepsThisBeat=1; 
+      for(let s=0;s<stepsThisBeat;s++){ 
+        const isSub=(s!==0); const isAccent=isBarAccent && s===0; 
+        scheduleClick(nextNoteTime,isAccent,isSub); 
+        if(s===0){ setTimeout(((accent,beatNo)=>()=>{ 
+          beatText.textContent=(beatNo+1); updateLEDs(beatNo,beatsPerBar); flashVisual(accent); 
+        })(isAccent,beatIndex), Math.max(0,(nextNoteTime - audioCtx.currentTime)*1000 - 8)); } 
+        let stepLen=noteLengthSec(); if(swingEl.checked && subdiv===2){ stepLen = s===0 ? stepLen*2/3 : stepLen*1/3; } 
+        nextNoteTime += stepLen; 
+      } 
+      currentBeat = (currentBeat + 1) % beatsPerBar; 
+    } 
   }
 
-  function vibratePulse(isAccent){
-    if (!vibrateEl.checked || !navigator.vibrate) return;
-    navigator.vibrate(isAccent ? 30 : 10);
+  function start(){ 
+    if(!unlocked) unlockAudio(); 
+    if(isRunning) return; 
+    isRunning=true; startStopBtn.textContent='정지'; 
+    const beatsPerBar=+beatsEl.value; updateLEDs(0,beatsPerBar); 
+    currentBeat=0; nextNoteTime = audioCtx.currentTime + 0.08; 
+    scheduleTimer = setInterval(scheduler, lookahead); 
   }
 
-  function scheduler(){
-    while (audioCtx && nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
-      const beatsPerBar = parseInt(beatsEl.value, 10);
-      const subdiv = parseInt(subdivEl.value, 10);
-      const beatIndex = currentBeat % beatsPerBar;
-      const isBarAccent = accentFirstEl.checked && beatIndex === 0;
-      let stepsThisBeat = subdiv;
-      if (subdiv === 1) stepsThisBeat = 1;
+  function stop(){ isRunning=false; startStopBtn.textContent='시작'; if(scheduleTimer) clearInterval(scheduleTimer); }
+  function reset(){ stop(); tapTimes=[]; beatText.textContent='1'; updateLEDs(0, +beatsEl.value); }
 
-      for (let s = 0; s < stepsThisBeat; s++) {
-        const isSub = (s !== 0);
-        const isAccent = isBarAccent && s===0;
-        scheduleClick(nextNoteTime, isAccent, isSub);
-        if (s === 0) {
-          setTimeout(((accent, beatNo)=>()=>{
-            beatText.textContent = (beatNo+1);
-            updateLEDs(beatNo, beatsPerBar);
-            flashVisual(accent);
-            vibratePulse(accent);
-          })(isAccent, beatIndex), Math.max(0, (nextNoteTime - audioCtx.currentTime)*1000 - 8));
-        }
-        let stepLen = noteLengthSec();
-        if (swingEl.checked && subdiv === 2) {
-          stepLen = s === 0 ? stepLen * 2/3 : stepLen * 1/3;
-        }
-        nextNoteTime += stepLen;
-      }
-      currentBeat = (currentBeat + 1) % beatsPerBar;
-    }
-  }
+  startStopBtn.addEventListener('click', ()=> isRunning? stop() : start());
+  resetBtn.addEventListener('click', reset);
+  bpmEl.addEventListener('input', updateBpmDisplay);
+  minus10.addEventListener('click', ()=>{ bpmEl.value=Math.max(20, +bpmEl.value-10); updateBpmDisplay(); });
+  plus10.addEventListener('click', ()=>{ bpmEl.value=Math.min(300, +bpmEl.value+10); updateBpmDisplay(); });
+  nudgeUp.addEventListener('click', ()=>{ bpmEl.value=Math.min(300, +bpmEl.value+1); updateBpmDisplay(); });
+  nudgeDown.addEventListener('click', ()=>{ bpmEl.value=Math.max(20, +bpmEl.value-1); updateBpmDisplay(); });
 
-  function updateLEDs(active, total){
-    const leds = document.getElementById('leds');
-    leds.innerHTML = "";
-    for (let i=0;i<total;i++){
-      const d = document.createElement("div");
-      d.className = "led" + (i===active ? " on" : "");
-      leds.appendChild(d);
-    }
-  }
+  // Tap tempo
+  function onTap(){ const now=performance.now(); if(lastTap && (now-lastTap)>1500) tapTimes=[]; tapTimes.push(now); lastTap=now; 
+    if(tapTimes.length>=3){ const ints=[]; for(let i=1;i<tapTimes.length;i++){ ints.push(tapTimes[i]-tapTimes[i-1]); } 
+      ints.sort((a,b)=>a-b); let use=ints.slice(); if(ints.length>=4) use=ints.slice(1,-1); 
+      const avg=use.reduce((a,b)=>a+b,0)/use.length; const bpm=Math.max(20, Math.min(300, Math.round(60000/avg))); 
+      bpmEl.value=bpm; updateBpmDisplay(); tapInfo.textContent=`탭 기반 BPM ≈ ${bpm}`; } 
+    else { tapInfo.textContent = `${tapTimes.length}회 탭됨…`; } }
+  tapBtn.addEventListener('click', onTap);
 
-  function start(){
-    initAudio();
-    if (isRunning) return;
-    isRunning = true;
-    startStopBtn.textContent = "정지";
-    const beatsPerBar = parseInt(beatsEl.value, 10);
-    updateLEDs(0, beatsPerBar);
-    currentBeat = 0;
-    nextNoteTime = audioCtx.currentTime + 0.06;
-    scheduleTimer = setInterval(scheduler, lookahead);
-  }
-
-  function stop(){
-    isRunning = false;
-    startStopBtn.textContent = "시작";
-    if (scheduleTimer) clearInterval(scheduleTimer);
-  }
-
-  function reset(){
-    stop();
-    tapTimes = [];
-    tapInfo.textContent = "T 키 또는 버튼을 3–6번 탭하세요.";
-    beatText.textContent = "1";
-    updateLEDs(0, parseInt(beatsEl.value,10));
-  }
-
-  function onTap(){
-    const now = performance.now();
-    if (lastTap && (now - lastTap) > 1500) tapTimes = [];
-    tapTimes.push(now);
-    lastTap = now;
-    if (tapTimes.length >= 3) {
-      const intervals = [];
-      for (let i=1;i<tapTimes.length;i++){ intervals.push(tapTimes[i]-tapTimes[i-1]); }
-      intervals.sort((a,b)=>a-b);
-      let use = intervals.slice();
-      if (intervals.length >= 4) use = intervals.slice(1, -1);
-      const avg = use.reduce((a,b)=>a+b,0) / use.length;
-      const bpm = Math.max(20, Math.min(300, Math.round(60000/avg)));
-      bpmEl.value = bpm;
-      updateBpmDisplay();
-      tapInfo.textContent = `탭 기반 BPM ≈ ${bpm}`;
-    } else {
-      tapInfo.textContent = `${tapTimes.length}회 탭됨…`;
-    }
-  }
-
-  function saveToPreset(){
-    const data = {
-      bpm: bpmEl.value,
-      beats: beatsEl.value,
-      subdiv: subdivEl.value,
-      accentFirst: accentFirstEl.checked,
-      swing: swingEl.checked,
-      sound: soundEl.value,
-      volume: volumeEl.value
-    };
-    localStorage.setItem("metronome_preset", JSON.stringify(data));
-    alert("현재 설정을 저장했습니다.");
-  }
-  function loadFromPreset(){
-    const raw = localStorage.getItem("metronome_preset");
-    if (!raw){ alert("저장된 프리셋이 없습니다."); return; }
-    try {
-      const d = JSON.parse(raw);
-      bpmEl.value = d.bpm || 100;
-      beatsEl.value = d.beats || "4";
-      subdivEl.value = d.subdiv || "1";
-      accentFirstEl.checked = !!d.accentFirst;
-      swingEl.checked = !!d.swing;
-      soundEl.value = d.sound || "click";
-      volumeEl.value = d.volume || 0.9;
-      updateBpmDisplay();
-      updateLEDs(0, parseInt(beatsEl.value,10));
-      alert("프리셋을 불러왔습니다.");
-    } catch(e){
-      alert("프리셋 데이터를 읽을 수 없습니다.");
-    }
-  }
-
-  startStopBtn.addEventListener("click", () => isRunning ? stop() : start());
-  resetBtn.addEventListener("click", reset);
-  bpmEl.addEventListener("input", updateBpmDisplay);
-  document.getElementById("minus10").addEventListener("click", ()=>{ bpmEl.value = Math.max(20, parseInt(bpmEl.value)-10); updateBpmDisplay(); });
-  document.getElementById("plus10").addEventListener("click",  ()=>{ bpmEl.value = Math.min(300, parseInt(bpmEl.value)+10); updateBpmDisplay(); });
-  document.getElementById("nudgeUp").addEventListener("click", ()=>{ bpmEl.value = Math.min(300, parseInt(bpmEl.value)+1); updateBpmDisplay(); });
-  document.getElementById("nudgeDown").addEventListener("click", ()=>{ bpmEl.value = Math.max(20, parseInt(bpmEl.value)-1); updateBpmDisplay(); });
-  beatsEl.addEventListener("change", ()=> updateLEDs(0, parseInt(beatsEl.value,10)));
-  tapBtn.addEventListener("click", onTap);
-  savePreset.addEventListener("click", saveToPreset);
-  loadPreset.addEventListener("click", loadFromPreset);
-
-  window.addEventListener("keydown", e => {
-    if (e.code === "Space"){ e.preventDefault(); isRunning ? stop() : start(); }
-    if (e.key === "t" || e.key === "T"){ onTap(); }
-    if (e.key === "ArrowUp"){ bpmEl.value = Math.min(300, parseInt(bpmEl.value)+1); updateBpmDisplay(); }
-    if (e.key === "ArrowDown"){ bpmEl.value = Math.max(20, parseInt(bpmEl.value)-1); updateBpmDisplay(); }
-  });
-
-  document.getElementById("installHelp").addEventListener("click", (e)=>{
-    e.preventDefault();
-    alert("iPhone: 공유 버튼 → '홈 화면에 추가'를 누르면 앱처럼 사용할 수 있어요. 오프라인에서도 동작합니다.");
-  });
-
-  updateBpmDisplay();
-  updateLEDs(0, parseInt(beatsEl.value,10));
+  updateBpmDisplay(); updateLEDs(0, +beatsEl.value);
 })();
 </script>
 </body>
