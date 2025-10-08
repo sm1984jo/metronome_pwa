@@ -123,7 +123,7 @@
     </div>
   </div>
 
-  <div class="version">버전 v1.0.3</div>
+  <div class="version">버전 v1.0.4</div>
 
 <script>
 if ('serviceWorker' in navigator) {
@@ -228,21 +228,58 @@ if ('serviceWorker' in navigator) {
   }
 
   async function loadSampleSet(ctx, type){
-    const defs = SOUND_DEFS[type];
-    const entries = await Promise.all(Object.entries(defs).map(async ([key, opts])=>{
-      const arrayBuffer = createWavArrayBuffer({
-        sampleRate: ctx.sampleRate,
-        freq: opts.freq,
-        duration: opts.duration,
-        attack: opts.attack,
-        decay: opts.decay,
-        partials: opts.partials,
-        noise: opts.noise || 0
-      });
-      const decoded = await decodeAudioBuffer(ctx, arrayBuffer);
-      return [key, decoded];
-    }));
-    return Object.fromEntries(entries);
+    // 먼저 실제 WAV 파일을 시도해보고, 실패하면 동적 생성
+    try {
+      const entries = await Promise.all(Object.entries({
+        accent: 'accent',
+        normal: 'normal', 
+        sub: 'sub'
+      }).map(async ([key, variant])=>{
+        try {
+          const response = await fetch(`sounds/${type}_${variant}.wav`);
+          if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            const decoded = await decodeAudioBuffer(ctx, arrayBuffer);
+            return [key, decoded];
+          }
+        } catch (e) {
+          console.log(`WAV 파일 로드 실패, 동적 생성으로 대체: ${type}_${variant}`);
+        }
+        
+        // WAV 파일 로드 실패시 동적 생성
+        const opts = SOUND_DEFS[type][key];
+        const arrayBuffer = createWavArrayBuffer({
+          sampleRate: ctx.sampleRate,
+          freq: opts.freq,
+          duration: opts.duration,
+          attack: opts.attack,
+          decay: opts.decay,
+          partials: opts.partials,
+          noise: opts.noise || 0
+        });
+        const decoded = await decodeAudioBuffer(ctx, arrayBuffer);
+        return [key, decoded];
+      }));
+      return Object.fromEntries(entries);
+    } catch (e) {
+      console.log('WAV 파일 로드 실패, 동적 생성으로 대체');
+      // 전체 실패시 기존 방식으로 폴백
+      const defs = SOUND_DEFS[type];
+      const entries = await Promise.all(Object.entries(defs).map(async ([key, opts])=>{
+        const arrayBuffer = createWavArrayBuffer({
+          sampleRate: ctx.sampleRate,
+          freq: opts.freq,
+          duration: opts.duration,
+          attack: opts.attack,
+          decay: opts.decay,
+          partials: opts.partials,
+          noise: opts.noise || 0
+        });
+        const decoded = await decodeAudioBuffer(ctx, arrayBuffer);
+        return [key, decoded];
+      }));
+      return Object.fromEntries(entries);
+    }
   }
 
   async function ensureSamples(ctx, type){

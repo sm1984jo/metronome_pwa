@@ -1,11 +1,20 @@
-const CACHE_NAME = 'metronome-ios-v2';
+const CACHE_NAME = 'metronome-ios-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './sw.js',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './sounds/click_accent.wav',
+  './sounds/click_normal.wav',
+  './sounds/click_sub.wav',
+  './sounds/wood_accent.wav',
+  './sounds/wood_normal.wav',
+  './sounds/wood_sub.wav',
+  './sounds/beep_accent.wav',
+  './sounds/beep_normal.wav',
+  './sounds/beep_sub.wav'
 ];
 
 self.addEventListener('install', event => {
