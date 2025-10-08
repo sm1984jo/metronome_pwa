@@ -199,79 +199,6 @@ if ('serviceWorker' in navigator) {
     const buffer = new ArrayBuffer(44 + dataLength);
     const view = new DataView(buffer);
 
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * bytesPerSample, true);
-    view.setUint16(32, bytesPerSample, true);
-    view.setUint16(34, 8 * bytesPerSample, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataLength, true);
-    floatTo16BitPCM(view, 44, data);
-
-    return buffer;
-  }
-
-  function decodeAudioBuffer(ctx, arrayBuffer){
-    return new Promise((resolve, reject)=>{
-      if(ctx.decodeAudioData.length === 1){
-        ctx.decodeAudioData(arrayBuffer).then(resolve).catch(reject);
-      } else {
-        ctx.decodeAudioData(arrayBuffer, resolve, reject);
-      }
-    });
-  }
-
-  async function loadSampleSet(ctx, type){
-    const defs = SOUND_DEFS[type];
-    const entries = await Promise.all(Object.entries(defs).map(async ([key, opts])=>{
-      const arrayBuffer = createWavArrayBuffer({
-        sampleRate: ctx.sampleRate,
-        freq: opts.freq,
-        duration: opts.duration,
-        attack: opts.attack,
-        decay: opts.decay,
-        partials: opts.partials,
-        noise: opts.noise || 0
-      });
-      const decoded = await decodeAudioBuffer(ctx, arrayBuffer);
-      return [key, decoded];
-    }));
-    return Object.fromEntries(entries);
-  }
-
-  async function ensureSamples(ctx, type){
-    if(currentSampleType === type && currentSamples){
-      return currentSamples;
-    }
-    if(sampleCache.has(type)){
-      currentSamples = sampleCache.get(type);
-      currentSampleType = type;
-      return currentSamples;
-    }
-    if(samplePromises.has(type)){
-      const cached = await samplePromises.get(type);
-      currentSamples = cached;
-      currentSampleType = type;
-      return currentSamples;
-    }
-    const promise = loadSampleSet(ctx, type).then(set=>{
-      sampleCache.set(type, set);
-      samplePromises.delete(type);
-      return set;
-    });
-    samplePromises.set(type, promise);
-    const loaded = await promise;
-    currentSamples = loaded;
-    currentSampleType = type;
-    return loaded;
-  }
-
   function showOverlay(){
     unlockOverlay.style.display='flex';
   }
@@ -296,7 +223,6 @@ if ('serviceWorker' in navigator) {
       if(!unlocked){
         primeContext(audioCtx);
         unlocked = true;
-        ensureSamples(audioCtx, soundChoice);
       }
       hideOverlay();
     } else {
@@ -330,7 +256,6 @@ if ('serviceWorker' in navigator) {
       primeContext(ctx);
       unlocked = true;
     }
-    await ensureSamples(ctx, soundChoice);
     hideOverlay();
     return ctx;
   }
@@ -357,15 +282,19 @@ if ('serviceWorker' in navigator) {
   function noteLengthSec(){ const bpm=+bpmEl.value; const base=60/bpm; const subdiv=+subdivEl.value; if(swingEl.checked&&subdiv===2) return base/2; return subdiv>1? base/subdiv: base; }
 
   function scheduleClick(time, isAccent, isSub){
-    if(!audioCtx || audioCtx.state !== 'running' || !currentSamples) return;
-    const buffer = isAccent ? currentSamples.accent : (isSub ? currentSamples.sub : currentSamples.normal);
-    if(!buffer) return;
-    const gainNode = audioCtx.createGain();
-    const src = audioCtx.createBufferSource();
-    src.buffer = buffer;
-    gainNode.gain.setValueAtTime(+volumeEl.value, time);
-    src.connect(gainNode).connect(audioCtx.destination);
-    src.start(time);
+    if(!audioCtx || audioCtx.state !== 'running') return;
+    const vol=+volumeEl.value;
+    const osc=audioCtx.createOscillator();
+    const env=audioCtx.createGain();
+    let freq;
+    const sound=soundEl.value;
+    if(sound==='click'){ freq=isAccent?2000:(isSub?1500:1700);} 
+    else if(sound==='wood'){ freq=isAccent?900:(isSub?650:750);} 
+    else { freq=isAccent?1000:(isSub?700:850);}
+    osc.frequency.value=freq; env.gain.value=0; osc.connect(env).connect(audioCtx.destination);
+    const a=isAccent?0.002:0.003; const d=isAccent?0.06:0.04;
+    env.gain.setValueAtTime(0,time); env.gain.linearRampToValueAtTime(vol,time+a); env.gain.exponentialRampToValueAtTime(0.0001,time+d);
+    osc.start(time); osc.stop(time+d+0.02);
   }
 
   function flashVisual(ac){ if(!visualEl.checked) return; display.style.transform='scale(1.02)';
@@ -401,8 +330,6 @@ if ('serviceWorker' in navigator) {
     const ctx = await unlockAudio();
     if(!ctx || ctx.state !== 'running') return;
     if(isRunning) return;
-    await ensureSamples(ctx, soundChoice);
-    if(!currentSamples) return;
     isRunning=true; startStopBtn.textContent='정지';
     const beatsPerBar=+beatsEl.value; updateLEDs(0,beatsPerBar);
     currentBeat=0; nextNoteTime = ctx.currentTime + 0.08;
