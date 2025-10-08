@@ -137,6 +137,67 @@ if ('serviceWorker' in navigator) {
   const unlockOverlay = $('#unlockOverlay');
   const unlockBtn = $('#unlockBtn');
   let audioCtx, unlocked = false;
+  let currentSamples = null;
+  let currentSampleType = null;
+  let soundChoice = 'click';
+  const sampleCache = new Map();
+  const samplePromises = new Map();
+
+  const SOUND_DEFS = {
+    click: {
+      accent: { freq: 2300, duration: 0.14, attack: 0.0018, decay: 0.11, partials: [1, 0.4, 0.18] },
+      normal: { freq: 1800, duration: 0.12, attack: 0.002, decay: 0.1, partials: [1, 0.32, 0.12] },
+      sub: { freq: 1400, duration: 0.1, attack: 0.0024, decay: 0.08, partials: [1, 0.25] }
+    },
+    wood: {
+      accent: { freq: 1050, duration: 0.16, attack: 0.002, decay: 0.13, partials: [1, 0.5, 0.22], noise: 0.08 },
+      normal: { freq: 820, duration: 0.14, attack: 0.0024, decay: 0.11, partials: [1, 0.35, 0.18], noise: 0.05 },
+      sub: { freq: 620, duration: 0.12, attack: 0.003, decay: 0.09, partials: [1, 0.28], noise: 0.04 }
+    },
+    beep: {
+      accent: { freq: 1200, duration: 0.18, attack: 0.003, decay: 0.14, partials: [1] },
+      normal: { freq: 900, duration: 0.16, attack: 0.003, decay: 0.12, partials: [1] },
+      sub: { freq: 720, duration: 0.14, attack: 0.004, decay: 0.1, partials: [1] }
+    }
+  };
+
+  function writeString(view, offset, str){
+    for(let i=0;i<str.length;i++){
+      view.setUint8(offset+i, str.charCodeAt(i));
+    }
+  }
+
+  function floatTo16BitPCM(view, offset, input){
+    for(let i=0;i<input.length;i++, offset+=2){
+      const s = Math.max(-1, Math.min(1, input[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+  }
+
+  function createWavArrayBuffer({ sampleRate, freq, duration, attack, decay, partials, noise }){
+    const length = Math.floor(duration * sampleRate);
+    const data = new Float32Array(length);
+    const attackSamples = Math.max(1, Math.floor(attack * sampleRate));
+    const decayConst = Math.max(0.0001, decay);
+
+    for(let i=0;i<length;i++){
+      const t = i / sampleRate;
+      const envAttack = Math.min(1, i / attackSamples);
+      const envDecay = Math.exp(-t / decayConst);
+      let sample = 0;
+      partials.forEach((amp, idx)=>{
+        sample += amp * Math.sin(2 * Math.PI * freq * (idx + 1) * t);
+      });
+      if(noise){
+        sample += (Math.random() * 2 - 1) * noise;
+      }
+      data[i] = sample * envAttack * envDecay;
+    }
+
+    const bytesPerSample = 2;
+    const dataLength = length * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
 
   function showOverlay(){
     unlockOverlay.style.display='flex';
@@ -207,6 +268,7 @@ if ('serviceWorker' in navigator) {
   const beatsEl = $('#beats'); const subdivEl = $('#subdiv');
   const accentFirstEl = $('#accentFirst'); const swingEl = $('#swing');
   const soundEl = $('#sound'); const volumeEl = $('#volume');
+  soundChoice = soundEl.value;
   const visualEl = $('#visual'); const display = $('#display');
   const beatText = $('#beatText'); const leds = $('#leds');
   const minus10 = $('#minus10'); const plus10 = $('#plus10');
@@ -303,6 +365,12 @@ if ('serviceWorker' in navigator) {
       bpmEl.value=bpm; updateBpmDisplay(); tapInfo.textContent=`탭 기반 BPM ≈ ${bpm}`; } 
     else { tapInfo.textContent = `${tapTimes.length}회 탭됨…`; } }
   tapBtn.addEventListener('click', onTap);
+  soundEl.addEventListener('change', async ()=>{
+    soundChoice = soundEl.value;
+    if(audioCtx){
+      await ensureSamples(audioCtx, soundChoice);
+    }
+  });
 
   updateBpmDisplay(); updateLEDs(0, +beatsEl.value);
 })();
